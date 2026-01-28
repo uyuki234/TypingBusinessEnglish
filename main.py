@@ -30,25 +30,48 @@ class Game:
         self.right_width = self.config.RIGHT_WIDTH
         self.left_width = self.config.WIDTH - self.right_width
 
-        # フォントファイルのパス
-        font_path = os.path.join(
-            os.path.dirname(__file__), "assets", "NotoSansJP-Black.ttf"
-        )
-
         # フォント初期化
-        base_size = int(min(self.left_width, self.config.HEIGHT) * 0.10)
-        label_size = int(base_size * 0.45)  # 左側ラベル（Typing Power）用、Levelラベル用
-        right_label_size = int(base_size * 0.45)  # 右側メインラベル用（Typing Skill等）
-        right_sublabel_size = int(base_size * 0.35)  # 右側サブラベル用
-        self.counter_font = pygame.font.Font(font_path, base_size)
-        self.label_font = pygame.font.Font(font_path, label_size)
-        self.right_label_font = pygame.font.Font(font_path, right_label_size)
-        self.right_sublabel_font = pygame.font.Font(font_path, right_sublabel_size)
+        self._init_fonts()
 
         # ゲーム状態の初期化
         self.state = GameState()
         self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
 
+        # UI要素の初期化
+        self._init_ui_elements()
+
+        # 右パネル用の画像を事前読み込み
+        self.right_images, self.right_image_max_width = self._load_right_images()
+
+        # UI描画クラスの初期化
+        self._init_ui_renderer()
+
+        self.running = True
+        self.auto_accumulator_ms = 0
+
+        # 保存データの読み込み
+        self.state.load()
+        self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
+        self.counter.set_value(self.state.typing_power)
+
+    def _init_fonts(self):
+        """フォント初期化"""
+        font_path = os.path.join(
+            os.path.dirname(__file__), "assets", "NotoSansJP-Black.ttf"
+        )
+
+        base_size = int(min(self.left_width, self.config.HEIGHT) * 0.10)
+        label_size = int(base_size * 0.45)
+        right_label_size = int(base_size * 0.45)
+        right_sublabel_size = int(base_size * 0.35)
+
+        self.counter_font = pygame.font.Font(font_path, base_size)
+        self.label_font = pygame.font.Font(font_path, label_size)
+        self.right_label_font = pygame.font.Font(font_path, right_label_size)
+        self.right_sublabel_font = pygame.font.Font(font_path, right_sublabel_size)
+
+    def _init_ui_elements(self):
+        """UI要素の初期化"""
         # ボタン初期化
         self.button = self._init_button()
 
@@ -63,12 +86,21 @@ class Game:
         )
 
         # タイピング表示の初期化
-        # ボタンは y = HEIGHT * 0.48 の中央、進捗バーは下から約 70px
-        # この間に英文を配置
+        self._init_typing_display()
+
+        # ランダムな文章を選択して表示
+        self._set_random_sentence()
+
+    def _init_typing_display(self):
+        """タイピング表示の初期化"""
+        base_size = int(min(self.left_width, self.config.HEIGHT) * 0.10)
+        font_path = os.path.join(
+            os.path.dirname(__file__), "assets", "NotoSansJP-Black.ttf"
+        )
+
         typing_display_font_size = int(base_size * 0.5)
         typing_display_font = pygame.font.Font(font_path, typing_display_font_size)
 
-        # 日本語フォント（Noto Sans JPを使用）
         japanese_font_size = int(base_size * 0.35)
         japanese_font = pygame.font.Font(font_path, japanese_font_size)
 
@@ -76,8 +108,8 @@ class Game:
         button_size = int(self.config.HEIGHT * self.config.BTN_IMAGE_RATIO)
         button_bottom_y = button_center_y + button_size // 2
 
-        progress_bar_top_y = self.config.HEIGHT - 24 - 18 - 24  # 進捗バーの上部Y座標
-        typing_display_height = progress_bar_top_y - button_bottom_y - 20  # 20pxの余白
+        progress_bar_top_y = self.config.HEIGHT - 24 - 18 - 24
+        typing_display_height = progress_bar_top_y - button_bottom_y - 20
         typing_display_top_y = button_bottom_y + 10
 
         self.typing_display = TypingDisplay(
@@ -89,13 +121,8 @@ class Game:
             offset_y=typing_display_top_y,
         )
 
-        # ランダムな文章を選択して表示
-        self._set_random_sentence()
-
-        # 右パネル用の画像を事前読み込み
-        self.right_images, self.right_image_max_width = self._load_right_images()
-
-        # UI描画クラスの初期化
+    def _init_ui_renderer(self):
+        """UI描画クラスの初期化"""
         fonts = {
             'label': self.label_font,
             'right_label': self.right_label_font,
@@ -108,14 +135,6 @@ class Game:
             self.right_width,
             self.config.HEIGHT
         )
-
-        self.running = True
-        self.auto_accumulator_ms = 0
-
-        # 保存データの読み込み
-        self.state.load()
-        self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
-        self.counter.set_value(self.state.typing_power)
 
     def _init_button(self):
         """ボタンを初期化"""
