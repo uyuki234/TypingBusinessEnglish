@@ -22,15 +22,15 @@ class Game:
         pygame.display.set_caption("TypingClicker")
         self.clock = pygame.time.Clock()
 
-        # レイアウト領域
-        self.left_width = self.config.WIDTH // 2
-        self.right_width = self.config.WIDTH - self.left_width
+        # レイアウト領域（右側は固定、左側は余った領域）
+        self.right_width = self.config.RIGHT_WIDTH
+        self.left_width = self.config.WIDTH - self.right_width
         
         # フォント初期化
         base_size = int(min(self.left_width, self.config.HEIGHT) * 0.12)
         label_size = int(base_size * 0.6)  # 左側ラベル（Typing Power）用
-        right_label_size = int(base_size * 0.8)  # 右側メインラベル用（少し控えめ）
-        right_sublabel_size = int(base_size * 0.5)  # 右側サブラベル用
+        right_label_size = int(base_size * 0.65)  # 右側メインラベル用
+        right_sublabel_size = int(base_size * 0.4)  # 右側サブラベル用
         self.counter_font = pygame.font.SysFont(None, base_size)
         self.label_font = pygame.font.SysFont(None, label_size)
         self.right_label_font = pygame.font.SysFont(None, right_label_size)

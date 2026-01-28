@@ -154,7 +154,7 @@ class UIRenderer:
         margin = 24
         bar_width = int(self.left_width * 0.85)
         bar_height = 24
-        bar_left = margin
+        bar_left = (self.left_width - bar_width) // 2  # 左側領域内で中央配置
         bar_top = self.screen_height - margin - bar_height - 18
 
         # 背景と枠

@@ -3,8 +3,9 @@
 
 class Config:
     """ゲーム設定を管理するクラス"""
-    WIDTH = 960
+    WIDTH = 1440
     HEIGHT = 640
+    RIGHT_WIDTH = 480     # 右側の幅（固定）、左側は余った領域
     BG_COLOR = (24, 24, 32)
     TEXT_COLOR = (235, 235, 235)
     FPS = 60
