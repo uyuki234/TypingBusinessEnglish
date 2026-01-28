@@ -45,6 +45,13 @@ source venv/bin/activate  # macOS/Linuxの場合
 python3 main.py
 ```
 
+### 仮想環境の終了
+
+```bash
+# 仮想環境を終了（非アクティベート）
+deactivate
+```
+
 ### 主な機能
 
 - **3 種類のアップグレード**
