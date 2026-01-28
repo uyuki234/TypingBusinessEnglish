@@ -157,11 +157,11 @@ deactivate
 ## コード品質測定ツール
 
 ### Pylint
-#### pygame モジュールの E1101 誤検知について
+#### pygame モジュールの E1101 検知について
 
-pygame モジュールを使用する際、Pylint が `E1101: Module 'pygame' has no 'XXX' member` という誤検知を報告します。
+pygame モジュールを使用する際、Pylint が `E1101: Module 'pygame' has no 'XXX' member` という検知を報告します。
 
-**誤検知の理由:**
+**検知の理由:**
 
 1. **動的な属性生成**: pygame は C 言語で実装されており、多くの定数やメソッドが実行時に動的に生成されます
 2. **静的解析の限界**: Pylint は静的解析ツールであり、実行時に生成される属性を検出できません
@@ -180,3 +180,7 @@ E1101 は、オブジェクトにそのようなメンバーはないよ、と�
 
 引用：https://qiita.com/stat/items/eb74bb26190759f87a05#e1101-%E3%82%A8%E3%83%A9%E3%83%BC
 
+## 使用素材について
+
+- **イラスト**: 生成 AI を利用して作成
+- **フォント**: Noto Sans Japanese を使用
