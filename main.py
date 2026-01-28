@@ -1,53 +1,11 @@
-
 import pygame
 import sys
 import os
-import math
-import json
 
-from counter import Counter
-from ui_renderer import UIRenderer
-
-
-class Config:
-    """ゲーム設定を管理するクラス"""
-    WIDTH = 960
-    HEIGHT = 640
-    BG_COLOR = (24, 24, 32)
-    TEXT_COLOR = (235, 235, 235)
-    FPS = 60
-    BTN_IMAGE_RATIO = 0.35
-    PANEL_BG = (34, 34, 46)
-    PANEL_RECT = (58, 92, 130)
-    PANEL_RECT_BORDER = (120, 160, 200)
-    PANEL_BTN = (80, 140, 200)
-    PANEL_BTN_BORDER = (180, 210, 240)
-    LEVEL_BAR_BG = (40, 40, 50)
-    LEVEL_BAR_FILL = (90, 170, 120)
-    LEVEL_BAR_BORDER = (180, 210, 240)
-
-
-class Button:
-    """ボタンの状態と描画を管理するクラス"""
-    
-    def __init__(self, center_pos, button_image):
-        """
-        Args:
-            center_pos (pygame.Vector2): ボタンの中央座標
-            button_image (pygame.Surface): ボタン画像
-        """
-        self.center = center_pos
-        self.image = button_image
-    
-    def is_clicked(self, mouse_pos):
-        """マウス位置がボタン上かどうかを判定"""
-        rect = self.image.get_rect(center=(int(self.center.x), int(self.center.y)))
-        return rect.collidepoint(mouse_pos)
-    
-    def draw(self, surface):
-        """ボタンを描画"""
-        rect = self.image.get_rect(center=(int(self.center.x), int(self.center.y)))
-        surface.blit(self.image, rect)
+from config import Config
+from game_state import GameState
+from game_logic import GameLogic
+from ui import Button, Counter, UIRenderer
 
 
 class Game:
@@ -78,19 +36,9 @@ class Game:
         self.right_label_font = pygame.font.SysFont(None, right_label_size)
         self.right_sublabel_font = pygame.font.SysFont(None, right_sublabel_size)
 
-        # ゲーム状態（タイピング力とレベル）
-        self.typing_power = 0
-        self.power_per_click_base = 1
-        self.power_per_second_base = 0
-        self.practice_level = 0
-        self.auto_level = 0
-        self.multiplier_level = 0
-        self.level = 1
-        self.xp = 0
-        self.next_level_xp = self._xp_required(self.level + 1)
-
-        # セーブファイルパス
-        self.save_path = os.path.join(os.path.dirname(__file__), "save.json")
+        # ゲーム状態の初期化
+        self.state = GameState()
+        self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
         
         # ボタン初期化
         self.button = self._init_button()
@@ -126,7 +74,9 @@ class Game:
         self.auto_accumulator_ms = 0
 
         # 保存データの読み込み
-        self._load_state()
+        self.state.load()
+        self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
+        self.counter.set_value(self.state.typing_power)
     
     def _init_button(self):
         """ボタンを初期化"""
@@ -203,18 +153,6 @@ class Game:
             new_width = int(max_size * aspect_ratio)
         
         return pygame.transform.scale(original_image, (new_width, new_height))
-
-    def _xp_required(self, n):
-        return math.ceil(125 * (1.5 ** (n - 1)))
-
-    def _current_multiplier(self):
-        return 1.5 ** self.multiplier_level
-
-    def _current_power_per_click(self):
-        return math.floor(self.power_per_click_base * self._current_multiplier())
-
-    def _current_power_per_second(self):
-        return math.floor(self.power_per_second_base * self._current_multiplier())
     
     def handle_events(self):
         """イベント処理"""
@@ -224,7 +162,9 @@ class Game:
             
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.button.is_clicked(event.pos):
-                    self._add_typing_power(self._current_power_per_click())
+                    multiplier = GameLogic.current_multiplier(self.state.multiplier_level)
+                    power = GameLogic.current_power_per_click(self.state.power_per_click_base, multiplier)
+                    self._add_typing_power(power)
                 else:
                     for idx, rect in enumerate(self.ui_renderer.right_button_rects):
                         if rect.collidepoint(event.pos):
@@ -233,7 +173,7 @@ class Game:
             
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    self.typing_power = 0
+                    self.state.typing_power = 0
                     self.counter.reset()
                 elif event.key == pygame.K_ESCAPE:
                     self.running = False
@@ -241,27 +181,28 @@ class Game:
     def render(self):
         """画面に描画"""
         self.screen.fill(self.config.BG_COLOR)
-        self.counter.set_value(self.typing_power)
+        self.counter.set_value(self.state.typing_power)
         self.button.draw(self.screen)
         self.counter.draw(self.screen, self.config.TEXT_COLOR)
         
         # レベル進捗バーの描画
         level_state = {
-            'level': self.level,
+            'level': self.state.level,
             'next_xp': self.next_level_xp,
-            'progress': self._xp_for_current_level_progress_ratio(),
+            'progress': GameLogic.xp_progress_ratio(self.state.xp, self.state.level, self.next_level_xp),
         }
         self.ui_renderer.draw_level_bar(self.screen, level_state)
         
         # 右パネルの描画
+        multiplier = GameLogic.current_multiplier(self.state.multiplier_level)
         game_state = {
-            'power_per_click': self._current_power_per_click(),
-            'power_per_second': self._current_power_per_second(),
-            'multiplier': self._current_multiplier(),
-            'practice_level': self.practice_level,
-            'auto_level': self.auto_level,
-            'multiplier_level': self.multiplier_level,
-            'costs': self._calc_costs(),
+            'power_per_click': GameLogic.current_power_per_click(self.state.power_per_click_base, multiplier),
+            'power_per_second': GameLogic.current_power_per_second(self.state.power_per_second_base, multiplier),
+            'multiplier': multiplier,
+            'practice_level': self.state.practice_level,
+            'auto_level': self.state.auto_level,
+            'multiplier_level': self.state.multiplier_level,
+            'costs': GameLogic.calc_costs(self.state.practice_level, self.state.auto_level, self.state.multiplier_level),
         }
         self.ui_renderer.draw_right_panel(
             self.screen,
@@ -272,35 +213,28 @@ class Game:
         
         pygame.display.flip()
 
-    def _calc_costs(self):
-        """UI表示用のコスト計算（購入ロジックなし）"""
-        practice_cost = math.ceil(10 * (1.35 ** self.practice_level))
-        auto_cost = math.ceil(50 * (1.60 ** self.auto_level))
-        multiplier_cost = math.ceil(500 * (3.00 ** self.multiplier_level))
-        return [practice_cost, auto_cost, multiplier_cost]
-
     def _handle_purchase(self, idx):
         """アップグレード購入処理（資金確認のみ）"""
-        costs = self._calc_costs()
+        costs = GameLogic.calc_costs(self.state.practice_level, self.state.auto_level, self.state.multiplier_level)
         cost = costs[idx]
-        if self.typing_power < cost:
+        if self.state.typing_power < cost:
             return  # 資金不足
 
         # 支払い
-        self.typing_power -= cost
+        self.state.typing_power -= cost
 
         # レベル更新と効果反映
         if idx == 0:
-            self.practice_level += 1
-            self.power_per_click_base += 1
+            self.state.practice_level += 1
+            self.state.power_per_click_base += 1
         elif idx == 1:
-            self.auto_level += 1
-            self.power_per_second_base += 2
+            self.state.auto_level += 1
+            self.state.power_per_second_base += 2
         elif idx == 2:
-            self.multiplier_level += 1
+            self.state.multiplier_level += 1
 
         # 表示更新
-        self.counter.set_value(self.typing_power)
+        self.counter.set_value(self.state.typing_power)
     
     def run(self):
         """メインループ"""
@@ -310,7 +244,7 @@ class Game:
             self.handle_events()
             self.render()
         
-        self._save_state()
+        self.state.save()
         pygame.quit()
         sys.exit()
 
@@ -319,73 +253,25 @@ class Game:
         self.auto_accumulator_ms += dt_ms
         while self.auto_accumulator_ms >= 1000:
             self.auto_accumulator_ms -= 1000
-            gain = self._current_power_per_second()
+            multiplier = GameLogic.current_multiplier(self.state.multiplier_level)
+            gain = GameLogic.current_power_per_second(self.state.power_per_second_base, multiplier)
             if gain > 0:
                 self._add_typing_power(gain)
 
     def _add_typing_power(self, amount):
-        self.typing_power += amount
+        self.state.typing_power += amount
         self._add_xp(amount)
-        self.counter.set_value(self.typing_power)
+        self.counter.set_value(self.state.typing_power)
 
     def _add_xp(self, amount):
-        self.xp += amount
+        self.state.xp += amount
         self._check_level_up()
 
     def _check_level_up(self):
         # 複数段のレベルアップにも対応
-        while self.xp >= self.next_level_xp:
-            self.level += 1
-            self.next_level_xp = self._xp_required(self.level + 1)
-
-    def _xp_for_current_level(self):
-        # 現在レベルの開始累計XP
-        return self._xp_required(self.level) if self.level > 1 else 0
-
-    def _xp_for_current_level_progress_ratio(self):
-        level_start_xp = self._xp_for_current_level()
-        span = max(self.next_level_xp - level_start_xp, 1)
-        return max(0.0, min(1.0, (self.xp - level_start_xp) / span))
-
-    def _save_state(self):
-        data = {
-            "typing_power": self.typing_power,
-            "power_per_click_base": self.power_per_click_base,
-            "power_per_second_base": self.power_per_second_base,
-            "practice_level": self.practice_level,
-            "auto_level": self.auto_level,
-            "multiplier_level": self.multiplier_level,
-            "level": self.level,
-            "xp": self.xp,
-        }
-        try:
-            with open(self.save_path, "w", encoding="utf-8") as f:
-                json.dump(data, f)
-        except OSError:
-            # 保存失敗時は黙って続行
-            pass
-
-    def _load_state(self):
-        if not os.path.exists(self.save_path):
-            return
-        try:
-            with open(self.save_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            return
-
-        self.typing_power = int(data.get("typing_power", self.typing_power))
-        self.power_per_click_base = int(data.get("power_per_click_base", self.power_per_click_base))
-        self.power_per_second_base = int(data.get("power_per_second_base", self.power_per_second_base))
-        self.practice_level = int(data.get("practice_level", self.practice_level))
-        self.auto_level = int(data.get("auto_level", self.auto_level))
-        self.multiplier_level = int(data.get("multiplier_level", self.multiplier_level))
-        self.level = int(data.get("level", self.level))
-        self.xp = int(data.get("xp", self.xp))
-        # next_level_xp はレベルから再計算
-        self.next_level_xp = self._xp_required(self.level + 1)
-        # 表示を最新化
-        self.counter.set_value(self.typing_power)
+        while self.state.xp >= self.next_level_xp:
+            self.state.level += 1
+            self.next_level_xp = GameLogic.xp_required(self.state.level + 1)
 
 
 if __name__ == "__main__":

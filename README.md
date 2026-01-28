@@ -25,22 +25,24 @@
 ### 環境構築
 
 ```bash
-# 仮想環境の作成（オプション）
+# 仮想環境の作成（推奨）
 python3 -m venv venv
-source venv/bin/activate  # macOSの場合
+source venv/bin/activate  # macOS/Linuxの場合
+# または Windows: venv\Scripts\activate
 
 # パッケージのインストール
 pip install -r requirements.txt
-
-# ゲームの実行
-python3 main.py
 ```
 
 ### 起動
 
 ```bash
-source ./.venv/bin/activate
-python3 main.py
+# 仮想環境をアクティベート
+source venv/bin/activate  # macOS/Linuxの場合
+# または Windows: venv\Scripts\activate
+
+# ゲームの実行
+python main.py
 ```
 
 ### 主な機能
