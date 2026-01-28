@@ -54,12 +54,12 @@ class Game:
         )
 
         # タイピング表示の初期化
-        # ボタンは y = HEIGHT * 0.55 の中央、進捗バーは下から約 70px
+        # ボタンは y = HEIGHT * 0.48 の中央、進捗バーは下から約 70px
         # この間に英文を配置
         typing_display_font_size = int(base_size * 0.35)
         typing_display_font = pygame.font.SysFont(None, typing_display_font_size)
         
-        button_center_y = int(self.config.HEIGHT * 0.55)
+        button_center_y = int(self.config.HEIGHT * 0.48)
         button_size = int(self.config.HEIGHT * self.config.BTN_IMAGE_RATIO)
         button_bottom_y = button_center_y + button_size // 2
         
@@ -112,7 +112,7 @@ class Game:
         button_image = self._scale_button_image(original_image, self.config.HEIGHT)
         
         # ボタン中央座標
-        center = pygame.Vector2(self.left_width // 2, self.config.HEIGHT * 0.55)
+        center = pygame.Vector2(self.left_width // 2, self.config.HEIGHT * 0.48)
         
         return Button(center, button_image)
 
