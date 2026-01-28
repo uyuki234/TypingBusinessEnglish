@@ -17,7 +17,7 @@ class Game:
 
     def __init__(self):
         """ゲーム初期化"""
-        pygame.init()
+        pygame.init()  # pylint: disable=no-member
 
         self.config = Config()
         self.screen = pygame.display.set_mode(
@@ -228,11 +228,11 @@ class Game:
     def handle_events(self):
         """イベント処理"""
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT:  # pylint: disable=no-member
                 self.running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # pylint: disable=no-member
                 self._handle_mouse_click(event.pos)
-            elif event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:  # pylint: disable=no-member
                 self._handle_keyboard(event)
 
     def _handle_mouse_click(self, pos):
@@ -261,7 +261,7 @@ class Game:
 
     def _handle_keyboard(self, event):
         """キーボード入力処理"""
-        if event.key == pygame.K_ESCAPE:
+        if event.key == pygame.K_ESCAPE:  # pylint: disable=no-member
             self.running = False
         elif event.unicode:
             self._handle_typing_input(event.unicode)
@@ -356,7 +356,7 @@ class Game:
             self.render()
 
         self.state.save()
-        pygame.quit()
+        pygame.quit()  # pylint: disable=no-member
         sys.exit()
 
     def _update_auto(self, dt_ms):
