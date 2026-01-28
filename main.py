@@ -206,33 +206,48 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.button.is_clicked(event.pos):
-                    multiplier = GameLogic.current_multiplier(
-                        self.state.multiplier_level
-                    )
-                    power = GameLogic.current_power_per_click(self.state.power_per_click_base, multiplier)
-                    self._add_typing_power(power)
-                else:
-                    for idx, rect in enumerate(self.ui_renderer.right_button_rects):
-                        if rect.collidepoint(event.pos):
-                            self._handle_purchase(idx)
-                            break
-
+                self._handle_mouse_click(event.pos)
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
-                else:
-                    # タイピング処理
-                    if event.unicode:  # 入力可能な文字の場合
-                        if self.typing_display.check_input(event.unicode):
-                            # 正しい入力の場合、ポイント+1
-                            self._add_typing_power(1)
+                self._handle_keyboard(event)
 
-                            # タイピング完了チェック
-                            if self.typing_display.is_complete():
-                                self._set_random_sentence()
+    def _handle_mouse_click(self, pos):
+        """マウスクリック処理"""
+        if self.button.is_clicked(pos):
+            self._handle_main_button_click()
+        else:
+            self._check_right_panel_buttons(pos)
+
+    def _handle_main_button_click(self):
+        """メインボタンクリック処理"""
+        multiplier = GameLogic.current_multiplier(
+            self.state.multiplier_level
+        )
+        power = GameLogic.current_power_per_click(
+            self.state.power_per_click_base, multiplier
+        )
+        self._add_typing_power(power)
+
+    def _check_right_panel_buttons(self, pos):
+        """右パネルボタンチェック"""
+        for idx, rect in enumerate(self.ui_renderer.right_button_rects):
+            if rect.collidepoint(pos):
+                self._handle_purchase(idx)
+                break
+
+    def _handle_keyboard(self, event):
+        """キーボード入力処理"""
+        if event.key == pygame.K_ESCAPE:
+            self.running = False
+        elif event.unicode:
+            self._handle_typing_input(event.unicode)
+
+    def _handle_typing_input(self, char):
+        """タイピング入力処理"""
+        if self.typing_display.check_input(char):
+            self._add_typing_power(1)
+            if self.typing_display.is_complete():
+                self._set_random_sentence()
 
     def render(self):
         """画面に描画"""
@@ -293,10 +308,12 @@ class Game:
         if self.state.typing_power < cost:
             return  # 資金不足
 
-        # 支払い
         self.state.typing_power -= cost
+        self._apply_upgrade(idx)
+        self.counter.set_value(self.state.typing_power)
 
-        # レベル更新と効果反映
+    def _apply_upgrade(self, idx):
+        """アップグレード効果を適用"""
         if idx == 0:
             self.state.practice_level += 1
             self.state.power_per_click_base += 1
@@ -305,9 +322,6 @@ class Game:
             self.state.power_per_second_base += 2
         elif idx == 2:
             self.state.multiplier_level += 1
-
-        # 表示更新
-        self.counter.set_value(self.state.typing_power)
 
     def run(self):
         """メインループ"""

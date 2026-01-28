@@ -31,123 +31,134 @@ class UIRenderer:
         available_height = self.screen_height - margin * 4
         rect_height = available_height / 3
         image_padding = 16
-        labels = ["Typing Skill", "Auto Typing", "CPU"]
-        sublabels = [
-            f"+ {game_state['power_per_click']:,} Per Click",
-            f"+ {game_state['power_per_second']:,} Per Second",
-            f"× {game_state['multiplier']:.2f} All",
-        ]
-        level_labels = [
-            f"Level {game_state['practice_level']}",
-            f"Level {game_state['auto_level']}",
-            f"Level {game_state['multiplier_level']}",
-        ]
-        costs = game_state['costs']
 
-        # ボタン領域をクリック判定用に初期化
         self.right_button_rects = []
 
-        # ボタンサイズ（各枠の中で下部に配置）
         button_width = int(rect_width * 0.55)
         button_height = int(rect_height * 0.28)
         button_padding_x = 16
         button_padding_y = 12
 
-        # 画像の最大幅を使ってラベルの基準X座標を決定（全行共通）
         label_base_left = (
-            self.left_width
-            + margin
-            + image_padding
-            + right_image_max_width
-            + image_padding
+            self.left_width + margin + image_padding
+            + right_image_max_width + image_padding
         )
 
+        labels = ["Typing Skill", "Auto Typing", "CPU"]
+        sublabels = self._build_sublabels(game_state)
+        level_labels = self._build_level_labels(game_state)
+        costs = game_state['costs']
+
         for i in range(3):
-            top = margin + i * (rect_height + margin)
-            rect_x = self.left_width + margin
-            rect = pygame.Rect(
-                rect_x,
-                top,
-                rect_width,
-                rect_height,
-            )
-            pygame.draw.rect(
-                surface,
-                self.config.PANEL_RECT,
-                rect,
-                border_radius=12,
-            )
-            pygame.draw.rect(
-                surface,
-                self.config.PANEL_RECT_BORDER,
-                rect,
-                width=2,
-                border_radius=12,
+            self._draw_panel_item(
+                surface, i, margin, rect_width, rect_height,
+                image_padding, button_width, button_height,
+                button_padding_x, button_padding_y, label_base_left,
+                right_images, labels, sublabels, level_labels, costs
             )
 
-            # 画像を長方形の上に重ねて表示（左寄せ＋余白）
-            img = right_images[i]
-            img_rect = img.get_rect()
-            img_rect.left = rect.left + image_padding
-            img_rect.centery = rect.centery
-            surface.blit(img, img_rect)
+    def _build_sublabels(self, game_state):
+        """サブラベル文字列の構築"""
+        return [
+            f"+ {game_state['power_per_click']:,} Per Click",
+            f"+ {game_state['power_per_second']:,} Per Second",
+            f"× {game_state['multiplier']:.2f} All",
+        ]
 
-            # 下部ボタンの左端を先に計算
-            btn_left = label_base_left
-            btn_top = rect.bottom - button_padding_y - button_height
-            btn_width = min(button_width, rect.right - button_padding_x - btn_left)
-            btn_rect = pygame.Rect(
-                btn_left,
-                btn_top,
-                btn_width,
-                button_height,
-            )
+    def _build_level_labels(self, game_state):
+        """レベルラベル文字列の構築"""
+        return [
+            f"Level {game_state['practice_level']}",
+            f"Level {game_state['auto_level']}",
+            f"Level {game_state['multiplier_level']}",
+        ]
 
-            # メインラベル（Typing Skill等）を枠の上側に配置
-            label_surface = self.right_label_font.render(labels[i], True, self.config.TEXT_COLOR)
-            label_rect = label_surface.get_rect()
-            label_rect.left = btn_left
-            label_rect.top = rect.top + 8
-            surface.blit(label_surface, label_rect)
+    def _draw_panel_item(self, surface, idx, margin, rect_width, rect_height,
+                         image_padding, button_width, button_height,
+                         button_padding_x, button_padding_y, label_base_left,
+                         right_images, labels, sublabels, level_labels, costs):
+        """パネルアイテムの描画"""
+        top = margin + idx * (rect_height + margin)
+        rect_x = self.left_width + margin
+        rect = pygame.Rect(rect_x, top, rect_width, rect_height)
 
-            # サブラベル（効果概要）をメインラベルの下に配置（左端を揃える）
-            sub_surface = self.right_sublabel_font.render(
-                sublabels[i], True, self.config.TEXT_COLOR
-            )
-            sub_rect = sub_surface.get_rect()
-            sub_rect.left = btn_left
-            sub_rect.top = label_rect.bottom + 2
-            surface.blit(sub_surface, sub_rect)
+        self._draw_rect_background(surface, rect)
+        self._draw_rect_image(surface, rect, right_images[idx], image_padding)
 
-            # レベルラベルをボタンの上側中央に配置
-            level_surface = self.label_font.render(level_labels[i], True, self.config.TEXT_COLOR)
-            level_rect = level_surface.get_rect()
-            level_rect.centerx = btn_rect.centerx
-            level_rect.bottom = btn_rect.top - 4
-            surface.blit(level_surface, level_rect)
+        btn_left = label_base_left
+        btn_top = rect.bottom - button_padding_y - button_height
+        btn_width = min(
+            button_width, rect.right - button_padding_x - btn_left
+        )
+        btn_rect = pygame.Rect(btn_left, btn_top, btn_width, button_height)
 
-            pygame.draw.rect(
-                surface,
-                self.config.PANEL_BTN,
-                btn_rect,
-                border_radius=10,
-            )
-            pygame.draw.rect(
-                surface,
-                self.config.PANEL_BTN_BORDER,
-                btn_rect,
-                width=2,
-                border_radius=10,
-            )
+        self._draw_panel_labels(
+            surface, rect, btn_left, btn_rect,
+            labels[idx], sublabels[idx], level_labels[idx]
+        )
+        self._draw_button(surface, btn_rect, costs[idx])
+        self.right_button_rects.append(btn_rect)
 
-            # ボタン中央にコスト表示
-            cost_text = f"Cost: {costs[i]:,}"
-            cost_surface = self.right_sublabel_font.render(cost_text, True, self.config.TEXT_COLOR)
-            cost_rect = cost_surface.get_rect(center=btn_rect.center)
-            surface.blit(cost_surface, cost_rect)
+    def _draw_rect_background(self, surface, rect):
+        """背景矩形の描画"""
+        pygame.draw.rect(
+            surface, self.config.PANEL_RECT, rect, border_radius=12
+        )
+        pygame.draw.rect(
+            surface, self.config.PANEL_RECT_BORDER, rect,
+            width=2, border_radius=12
+        )
 
-            # クリック判定用に保持
-            self.right_button_rects.append(btn_rect)
+    def _draw_rect_image(self, surface, rect, img, image_padding):
+        """矩形内の画像描画"""
+        img_rect = img.get_rect()
+        img_rect.left = rect.left + image_padding
+        img_rect.centery = rect.centery
+        surface.blit(img, img_rect)
+
+    def _draw_panel_labels(self, surface, rect, btn_left, btn_rect,
+                           label, sublabel, level_label):
+        """パネルラベルの描画"""
+        label_surface = self.right_label_font.render(
+            label, True, self.config.TEXT_COLOR
+        )
+        label_rect = label_surface.get_rect()
+        label_rect.left = btn_left
+        label_rect.top = rect.top + 8
+        surface.blit(label_surface, label_rect)
+
+        sub_surface = self.right_sublabel_font.render(
+            sublabel, True, self.config.TEXT_COLOR
+        )
+        sub_rect = sub_surface.get_rect()
+        sub_rect.left = btn_left
+        sub_rect.top = label_rect.bottom + 2
+        surface.blit(sub_surface, sub_rect)
+
+        level_surface = self.label_font.render(
+            level_label, True, self.config.TEXT_COLOR
+        )
+        level_rect = level_surface.get_rect()
+        level_rect.centerx = btn_rect.centerx
+        level_rect.bottom = btn_rect.top - 4
+        surface.blit(level_surface, level_rect)
+
+    def _draw_button(self, surface, btn_rect, cost):
+        """ボタンとコスト表示の描画"""
+        pygame.draw.rect(
+            surface, self.config.PANEL_BTN, btn_rect, border_radius=10
+        )
+        pygame.draw.rect(
+            surface, self.config.PANEL_BTN_BORDER, btn_rect,
+            width=2, border_radius=10
+        )
+
+        cost_text = f"Cost: {cost:,}"
+        cost_surface = self.right_sublabel_font.render(
+            cost_text, True, self.config.TEXT_COLOR
+        )
+        cost_rect = cost_surface.get_rect(center=btn_rect.center)
+        surface.blit(cost_surface, cost_rect)
 
     def draw_level_bar(self, surface, level_state):
         """左下にレベル進捗バーを描画"""
